@@ -10,7 +10,16 @@ const clean=s=>String(s||'').trim();
 function App(){
  const [section,setSection]=useState('Inicio'),[article,setArticle]=useState(null),[query,setQuery]=useState(''),[searchOpen,setSearchOpen]=useState(false),[mobile,setMobile]=useState(false),[login,setLogin]=useState(false),[session,setSession]=useState(null),[posts,setPosts]=useState([]),[authBusy,setAuthBusy]=useState(false),[authErr,setAuthErr]=useState(''),[studio,setStudio]=useState(false),[compose,setCompose]=useState(false),[editing,setEditing]=useState(null),[saveBusy,setSaveBusy]=useState(false),[message,setMessage]=useState('');
  useEffect(()=>{if(!supabase)return; supabase.auth.getSession().then(({data})=>setSession(data.session)); const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,s)=>setSession(s));return()=>subscription.unsubscribe()},[]);
- useEffect(()=>{if(!supabase)return;supabase.from('articles').select('*').eq('status','published').order('published_at',{ascending:false}).then(({data})=>setPosts(data||[])},[]);
+useEffect(() => {
+  if (!supabase) return;
+
+  supabase
+    .from('articles')
+    .select('*')
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .then(({ data }) => setPosts(data || []));
+}, []);
  const normalized=posts.map(p=>({id:p.id,section:p.section,topic:p.topic||p.section.toUpperCase(),title:p.title,deck:p.deck,date:new Date(p.published_at||p.created_at).toLocaleDateString('es-AR',{day:'numeric',month:'short',year:'numeric'}).toUpperCase(),read:`${p.read_minutes||5} MIN`,author:p.author||'Equipo editorial',image:p.image_url||'',body:(p.body||'').split(/\n\s*\n/).filter(Boolean),live:true}));
  const all=[...normalized,...demos];
  const filtered=all.filter(a=>(section==='Inicio'||a.section===section)&&(!query||[a.title,a.deck,a.topic,a.section].join(' ').toLowerCase().includes(query.toLowerCase())));
