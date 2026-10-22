@@ -1,53 +1,45 @@
-# LA MESA CHICA — Sitio editorial
+# La Mesa Chica
 
-Web responsive de estética editorial, pensada para un medio argentino de política, actualidad, análisis e informes. Construida con **React + Vite + Supabase**. Lista para desplegar en **Vercel**.
+Medio editorial en React + Vite, Supabase Auth, Postgres con RLS y Storage. La portada original se conserva. Las notas ficticias siguen en `src/data.js`, ocultas salvo que `VITE_SHOW_DEMO=true`.
 
-## Arrancar en tu computadora
+## Desarrollo
 
-1. Instalar Node.js 20 o posterior.
-2. En esta carpeta: `npm install`
-3. Ejecutar: `npm run dev`
-4. Abrir la dirección local que muestra la terminal.
+Node 22 o 24. Ejecutar `npm ci`, copiar `.env.example` a `.env.local`, completar la URL y la clave publicable, y ejecutar `npm run dev`. `npm run build` genera `dist/`.
 
-La portada funciona sin configurar servicios externos, con **seis notas ficticias de demostración**. No publicarlas como noticias reales. Para editar y publicar artículos es necesario activar Supabase.
+Nunca colocar claves secretas o `service_role` en variables VITE. La clave publicable es pública por diseño; los permisos se aplican en Postgres.
 
-## Activar usuarios, contraseña y redacción privada
+## Base de datos
 
-1. Creá un proyecto en [Supabase](https://supabase.com/).
-2. En **SQL Editor**, ejecutá el contenido de `supabase.sql` (solo una vez).
-3. En **Authentication > Users**, creá los usuarios del equipo con email y contraseña (o mediante invitaciones administradas). Para no abrir el registro a extraños, mantené deshabilitado el registro público en Auth.
-4. Por cada usuario, buscá su UUID y agregalo a `public.editors` con `role` (`admin`, `editor` o `writer`) según el ejemplo al final de `supabase.sql`. Sin estar en `editors`, no puede editar publicaciones.
-5. Copiá `.env.example` a `.env.local` y completá `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` desde **Project Settings > API**. Usá la clave *anon/publishable*, **NUNCA** `service_role`.
-6. Reiniciá el servidor con `npm run dev`. Ingresá a **Ingresar**, iniciá sesión y publicá.
+Proyecto existente: `qjwqificdwnoxaudxjda`. Las migraciones editoriales se aplicaron sobre la base existente. No ejecutar `supabase.sql` sobre esa base otra vez: es el instalador para proyectos vacíos. Las migraciones en `supabase/migrations` documentan el esquema y los cambios incrementales.
 
-### Permisos implementados
+Para probar RLS: ejecutar `supabase/tests/permissions.sql` con una conexión administrativa en una sesión. Todas las cuentas y notas de prueba se revierten con ROLLBACK.
 
-- Anónimo: solo lectura de artículos publicados.
-- Usuario autenticado no autorizado: no puede guardar, editar ni leer borradores.
-- Writer: crea artículos; modifica solamente los propios.
-- Editor/admin: crean y modifican artículos del equipo.
-- La autenticación y el control real de permisos se validan en **Supabase Auth + Row Level Security**, no solo en el frontend.
+## Acceso
 
-**Nota:** el contenido demo se guarda en código (`src/data.js`), no en la base de datos. Al agregar publicaciones reales, aparecen antes que las demostraciones. Para el lanzamiento definitivo, eliminá o reemplazá los ejemplos del archivo.
+Ingresar desde la cabecera o `/#redaccion`. Los usuarios necesitan una cuenta de Supabase Auth y una fila en `editors`. El primer administrador se configura desde una conexión administrativa; el panel permite agregar integrantes por UUID y cambiar roles. La creación/invitación de cuentas y recuperación de contraseña se administran en Supabase Auth.
 
-## Desplegar en Vercel
+| Rol | Acceso |
+| --- | --- |
+| Público | Lee notas publicadas, categorías y autores |
+| Cuenta sin rol | Sin acceso a la redacción ni borradores |
+| Redactor | Crea y edita sus borradores, carga imágenes propias |
+| Editor | Edita, publica y despublica notas; administra categorías, autores e imágenes |
+| Administrador | Todo lo anterior más integrantes y roles |
 
-1. Subí esta carpeta a un repositorio de GitHub.
-2. En Vercel elegí **Add New > Project** y seleccioná el repositorio.
-3. Framework preset: **Vite**. Build command: `npm run build`. Output directory: `dist`.
-4. En **Settings > Environment Variables** agregá las dos variables `VITE_SUPABASE_*` con los valores reales.
-5. Desplegá. No hace falta servidor dedicado.
+Los redactores no pueden modificar notas ya publicadas ni leer borradores ajenos. El autor técnico es inmutable. Un administrador no puede cambiar su propio rol. No hay eliminación de artículos: despublicar conserva el contenido.
 
-## Próximas mejoras recomendadas
+## Trabajo editorial
 
-- Quitar las notas de ejemplo y publicar artículos revisados con autor, fecha y fuentes.
-- Cargar imágenes propias y agregar créditos fotográficos.
-- Panel editorial con calendario, comentarios y aprobación previa a publicar.
-- URLs individuales para artículos, SEO/Open Graph, newsletter, analítica y dominio.
-- Página institucional **Quiénes somos** y política de correcciones/editorial.
+El panel incluye archivo con búsqueda y filtro, borradores, publicación y despublicación explícita, categorías, firmas y biografías, portadas, créditos y descripción alternativa. Guardar comprueba la fila devuelta por la base y detecta ediciones concurrentes mediante `updated_at`. Las notas tienen enlaces `/#nota/UUID`.
 
-## Seguridad y alcance
+Las portadas se almacenan en el bucket público `editorial`: no subir documentos privados. JPG, PNG, WebP y AVIF hasta 5 MB. Cada carga genera una ruta nueva; no sobrescribe archivos anteriores. La galería permite copiar enlaces y eliminar archivos sin referencias. Postgres bloquea la eliminación de una imagen utilizada por cualquier nota.
 
-- Login real al configurar Supabase. Sin variables de entorno, el botón muestra claramente que el sistema no está habilitado: **no simula autenticación ni guarda contraseñas**.
-- La demo es un prototipo funcional inicial, no un CMS completo ni un portal con noticias verificadas en vivo.
-- Antes del lanzamiento real, conviene revisar protección antiabuso, backups, políticas de contenido, fuentes, privacidad y permisos de equipo.
+## Vercel
+
+Proyecto principal: `mesachica` (`prj_fZeRovxu4xOBahv7ief6zARaxNsg`). Dominio: https://mesachica-five.vercel.app. Repositorio: https://github.com/enrisid6/mesachica, rama `main`.
+
+Variables de producción, preview y desarrollo: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (acepta clave publicable moderna). No hace falta un servidor propio. La integración Git despliega los cambios de la rama principal.
+
+## Pendientes de operación
+
+Asignar la cuenta real del director como primer administrador. Desactivar registro público en Supabase Auth, configurar URL del sitio y redirecciones de correo y revisar política de contraseña/SMTP antes de invitar al equipo. El control editorial rechaza cuentas sin membresía aunque exista registro público. No hay notas reales todavía.
