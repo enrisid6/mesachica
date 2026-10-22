@@ -108,3 +108,11 @@ grant execute on function private.image_in_use(text) to authenticated;
 create policy editorial_list on storage.objects for select to authenticated using(bucket_id='editorial' and (private.team_role() in ('admin','editor') or (private.team_role()='writer' and (storage.foldername(name))[1]=auth.uid()::text)));
 create policy editorial_delete_unused on storage.objects for delete to authenticated using(bucket_id='editorial' and (private.team_role() in ('admin','editor') or (private.team_role()='writer' and (storage.foldername(name))[1]=auth.uid()::text)) and not private.image_in_use(name));
 commit;
+begin;
+create or replace function public.sync_author_name() returns trigger language plpgsql set search_path='' as $$begin
+ update public.articles set author=new.name where author_id=new.id;
+ return new;
+end$$;
+revoke all on function public.sync_author_name() from public;
+create trigger sync_author_name after update of name on public.authors for each row when (old.name is distinct from new.name) execute function public.sync_author_name();
+commit;
