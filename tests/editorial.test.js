@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {selectArticles,frontPage,categoryOf,themeOf,navigation} from '../src/editorial.js';
+const notes=[{id:'new',section:'Actualidad',theme:'Política nacional',title:'Nueva'},{id:'world',section:'Análisis',theme:'Internacional',title:'Mundo'},{id:'legacy',section:'Internacional',title:'Legado'},{id:'ideas',section:'Ideas',title:'Debate'},{id:'featured',section:'Informes',featured:true,title:'Investigación'}];
+test('four navigation items and legacy classifications remain readable',()=>{assert.equal(navigation.length,4);assert.equal(categoryOf(notes[3]),'Opinión');assert.equal(themeOf(notes[2]),'Internacional')});
+test('international notes occur once in all publications and remain filterable by type',()=>{const all=selectArticles(notes);assert.equal(all.length,5);assert.equal(new Set(all.map(a=>a.id)).size,5);assert.deepEqual(selectArticles(notes,{section:'Internacional'}).map(a=>a.id),['world','legacy']);assert.deepEqual(selectArticles(notes,{section:'Internacional',category:'Análisis'}).map(a=>a.id),['world']);assert.equal(selectArticles(notes,{category:'Opinión'})[0].id,'ideas')});
+test('featured leads; newest follow; no repeated cards across the front page',()=>{const page=frontPage(notes);assert.equal(page.hero.id,'featured');assert.deepEqual(page.sidebar.map(a=>a.id),['new','world']);assert.deepEqual(page.latest.map(a=>a.id),['legacy','ideas']);assert.equal(frontPage([]).hero,undefined);assert.deepEqual(frontPage([notes[0]]).latest,[])});
+test('search combines category, theme and text without escaping filters',()=>{assert.equal(selectArticles(notes,{query:'internacional'}).length,2);assert.equal(selectArticles(notes,{category:'Opinión',query:'Mundo'}).length,0)});
